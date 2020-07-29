@@ -9,11 +9,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,7 +26,9 @@ import com.uuzuche.lib_zxing.activity.ZXingLibrary;
 
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 import im.zego.zegoexpress.ZegoExpressEngine;
 import im.zego.zegoexpress.callback.IZegoEventHandler;
@@ -63,6 +67,10 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton ib_remote_stream_audio;
     private CheckBox cb_play_from;
 
+    private StringBuffer bufferLog = new StringBuffer();
+    private ScrollView mscrollView;
+    private SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,8 +90,14 @@ public class MainActivity extends AppCompatActivity {
         ib_local_mic = findViewById(R.id.ib_local_mic);
         ib_remote_stream_audio = findViewById(R.id.ib_remote_mic);
 
+        mscrollView = findViewById(R.id.sv_log);
+
         userID = "uID" + System.currentTimeMillis();
         userName = "uName" + System.currentTimeMillis();
+
+        Log.i("ExpressDemo", "ZEGO SDK Version： " + ZegoExpressEngine.getVersion());
+        bufferLog.append(format.format(new Date()) + "  ZEGO SDK Version： " + ZegoExpressEngine.getVersion() + "\n");
+        new Thread(new RunnablePrintLog()).start();
     }
 
     @Override
@@ -108,6 +122,8 @@ public class MainActivity extends AppCompatActivity {
             if (!initDomain.equals("")) {
                 engineConfig.advancedConfig.put("init_domain_name", initDomain);
                 if (cb_play_from.isChecked()) {
+                    Log.i("ExpressDemo", "setting from UDP Server to PlayingStream");
+                    bufferLog.append(format.format(new Date()) + " : setting from UDP Server to PlayingStream \n");
                     engineConfig.advancedConfig.put("prefer_play_ultra_source", "1");//设置优先从zego udp服务器拉流
                 }
                 ZegoExpressEngine.setEngineConfig(engineConfig);
@@ -117,19 +133,22 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onRoomStateUpdate(String roomID, ZegoRoomState state, int errorCode, JSONObject extendedData) {
                     super.onRoomStateUpdate(roomID, state, errorCode, extendedData);
-                    System.out.println("onRoomStateUpdate >>>>>  roomID：" + roomID + " state：" + state.toString() + " errorCode：" + errorCode + " extendedData：" + extendedData.toString());
+                    Log.i("ExpressDemo", "onRoomStateUpdate >>>>>  roomID：" + roomID + " state：" + state.toString() + " errorCode：" + errorCode + " extendedData：" + extendedData.toString());
+                    bufferLog.append(format.format(new Date()) + " : onRoomStateUpdate >>>>>  roomID：" + roomID + " state：" + state.toString() + " errorCode：" + errorCode + " extendedData：" + extendedData.toString() + "\n");
                 }
 
                 @Override
                 public void onRoomUserUpdate(String roomID, ZegoUpdateType updateType, ArrayList<ZegoUser> userList) {
                     super.onRoomUserUpdate(roomID, updateType, userList);
-                    System.out.println("onRoomUserUpdate >>>>>  roomID：" + roomID + " updateType：" + updateType.toString() + " userList：" + JSON.toJSONString(userList));
+                    Log.i("ExpressDemo", "onRoomUserUpdate >>>>>  roomID：" + roomID + " updateType：" + updateType.toString() + " userList：" + JSON.toJSONString(userList));
+                    bufferLog.append(format.format(new Date()) + " : onRoomUserUpdate >>>>>  roomID：" + roomID + " updateType：" + updateType.toString() + " userList：" + JSON.toJSONString(userList) + "\n");
                 }
 
                 @Override
                 public void onRoomStreamUpdate(String roomID, ZegoUpdateType updateType, ArrayList<ZegoStream> streamList) {
                     super.onRoomStreamUpdate(roomID, updateType, streamList);
-                    System.out.println("onRoomStreamUpdate >>>>>  roomID：" + roomID + " updateType：" + updateType.toString() + " streamList：" + JSON.toJSONString(streamList));
+                    Log.i("ExpressDemo", "onRoomStreamUpdate >>>>>  roomID：" + roomID + " updateType：" + updateType.toString() + " streamList：" + JSON.toJSONString(streamList));
+                    bufferLog.append(format.format(new Date()) + " : onRoomStreamUpdate >>>>>  roomID：" + roomID + " updateType：" + updateType.toString() + " streamList：" + JSON.toJSONString(streamList) + "\n");
                     if (updateType == ZegoUpdateType.ADD) {
                         for (ZegoStream e : streamList) {
                             if (e.streamID != publishStreamID) {
@@ -143,16 +162,17 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onPublisherQualityUpdate(String streamID, ZegoPublishStreamQuality quality) {
                     super.onPublisherQualityUpdate(streamID, quality);
-                    System.out.println("onPublisherQualityUpdate >>>>>  streamID：" + streamID + " quality：" + JSON.toJSONString(quality));
+                    Log.i("ExpressDemo", "onPublisherQualityUpdate >>>>>  streamID：" + streamID + " quality：" + JSON.toJSONString(quality));
+                    bufferLog.append(format.format(new Date()) + " : onPublisherQualityUpdate >>>>>  streamID：" + streamID + " quality：" + JSON.toJSONString(quality) + "\n");
                 }
 
                 @Override
                 public void onPlayerQualityUpdate(String streamID, ZegoPlayStreamQuality quality) {
                     super.onPlayerQualityUpdate(streamID, quality);
-                    System.out.println("onPlayerQualityUpdate >>>>>  streamID：" + streamID + " quality：" + JSON.toJSONString(quality));
+                    Log.i("ExpressDemo", "onPlayerQualityUpdate >>>>>  streamID：" + streamID + " quality：" + JSON.toJSONString(quality));
+                    bufferLog.append(format.format(new Date()) + " : onPlayerQualityUpdate >>>>>  streamID：" + streamID + " quality：" + JSON.toJSONString(quality) + "\n");
                 }
             });
-            System.out.println("ZEGO SDK Version： " + ZegoExpressEngine.getVersion());
             button.setText("release SDK");
         } else {
             /** 销毁引擎 */
@@ -176,6 +196,10 @@ public class MainActivity extends AppCompatActivity {
             /** 创建用户对象 */
             /** Create user */
             ZegoUser user = new ZegoUser(userID, userName);
+
+            Log.i("ExpressDemo", "loginRoom： roomID:" + roomID + "  userID:" + userID + "  userName:" + userName);//打印信息
+            bufferLog.append(format.format(new Date()) + " : loginRoom： roomID:" + roomID + "  userID:" + userID + "  userName:" + userName + "\n");
+
             /** 开始登录房间 */
             /** Begin to login room */
             engine.loginRoom(roomID, user, null);
@@ -202,6 +226,10 @@ public class MainActivity extends AppCompatActivity {
             /** Start preview and set the local preview view. */
             View local_view = findViewById(R.id.local_view);
             engine.startPreview(new ZegoCanvas(local_view));
+
+            Log.i("ExpressDemo", "startPublishingStream:  publishStreamID:" + publishStreamID);
+            bufferLog.append(format.format(new Date()) + " : startPublishingStream:  publishStreamID:" + publishStreamID + "\n");
+
             /** 开始推流 */
             /** Begin to publish stream */
             engine.startPublishingStream(publishStreamID);
@@ -304,8 +332,9 @@ public class MainActivity extends AppCompatActivity {
                         tvInitDomain.setText("init_domain: " + initDomain);
                         tvAppID.setText("appID: " + appID);
                         tvTestEnv.setText("TestEnv: " + isTestEnv);
-                    }catch (Exception e){
-                        System.out.println(e);
+                    } catch (Exception e) {
+                        Log.e("ExpressDemo", e.toString());
+                        bufferLog.append(format.format(new Date()) + " JSON parse failure \n");
                     }
                 } else if (bundle.getInt(CodeUtils.RESULT_TYPE) == CodeUtils.RESULT_FAILED) {
                     Toast.makeText(MainActivity.this, "解析二维码失败", Toast.LENGTH_LONG).show();
@@ -313,4 +342,26 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
+    class RunnablePrintLog implements Runnable {
+        TextView tv_log = findViewById(R.id.tv_log);
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        tv_log.setText(bufferLog.toString());
+                    }
+                });
+            }
+        }
+    }
 }
+
