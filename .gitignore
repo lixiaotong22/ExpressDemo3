@@ -16,3 +16,5 @@
 /.gradle
 /gradle
 app/proguard-rules.pro
+/app/release/
+sign.jks

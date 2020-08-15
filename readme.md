@@ -6,7 +6,7 @@
 
 Android Studio：import  project（gradle ，and ant ）,下载依赖包，build and run 
 
-APP：左侧点击扫描按钮，扫描对应配置的二维码，配置二维码地址：[http://doc.oa.zego.im/tool/QrcodeConfig](http://doc.oa.zego.im/tool/QrcodeConfig)，标题一栏可输入 隔离域名。
+APP：左侧点击扫描按钮，扫描对应配置的二维码，配置二维码地址：[http://doc.oa.zego.im/tool/QrcodeConfig](http://doc.oa.zego.im/tool/QrcodeConfig)，（标题一栏，可输入 隔离域名）
 
 ###  2. 注意事项：
 
