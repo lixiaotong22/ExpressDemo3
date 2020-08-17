@@ -382,7 +382,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean hasData() {
-        if (appID != 0 && !appSign.equals("") && isTestEnv != false) {
+        if (appID != 0 && !appSign.equals("") ) {
             return true;
         } else {
             return false;
