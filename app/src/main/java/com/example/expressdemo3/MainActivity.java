@@ -5,6 +5,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
@@ -15,7 +16,6 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,7 +29,6 @@ import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 import im.zego.zegoexpress.ZegoExpressEngine;
 import im.zego.zegoexpress.callback.IZegoEventHandler;
@@ -43,8 +42,10 @@ import im.zego.zegoexpress.entity.ZegoCanvas;
 import im.zego.zegoexpress.entity.ZegoEngineConfig;
 import im.zego.zegoexpress.entity.ZegoPlayStreamQuality;
 import im.zego.zegoexpress.entity.ZegoPublishStreamQuality;
+import im.zego.zegoexpress.entity.ZegoRoomConfig;
 import im.zego.zegoexpress.entity.ZegoStream;
 import im.zego.zegoexpress.entity.ZegoUser;
+
 
 public class MainActivity extends AppCompatActivity {
     private long appID;
@@ -70,8 +71,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton ib_remote_stream_audio;
     private CheckBox cb_play_from;
 
-    private List<String> listLog = new ArrayList<>();
-    private ScrollView mscrollView;
+    public static ArrayList<String> listLog = new ArrayList<>();
     private SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
 
     @Override
@@ -94,14 +94,11 @@ public class MainActivity extends AppCompatActivity {
         ib_local_mic = findViewById(R.id.ib_local_mic);
         ib_remote_stream_audio = findViewById(R.id.ib_remote_mic);
 
-        mscrollView = findViewById(R.id.sv_log);
-
         userID = "uID" + System.currentTimeMillis();
         userName = "uName" + System.currentTimeMillis();
 
         Log.i("ExpressDemo", "ZEGO SDK Version： " + ZegoExpressEngine.getVersion());
         listLog.add(format.format(new Date()) + "  ZEGO SDK Version： " + ZegoExpressEngine.getVersion() + "\n");
-        new Thread(new RunnablePrintLog()).start();
     }
 
     @Override
@@ -214,6 +211,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     public void ClickLogin(View view) {
         if (engine == null) {
             Toast.makeText(this, "sdk_not_init", Toast.LENGTH_SHORT).show();
@@ -235,10 +233,30 @@ public class MainActivity extends AppCompatActivity {
             Log.i("ExpressDemo", "loginRoom： roomID:" + roomID + "  userID:" + userID + "  userName:" + userName);//打印信息
             listLog.add(format.format(new Date()) + ":loginRoom:roomID:" + roomID + "  userID:" + userID + "  userName:" + userName + "\n");
 
-            /** 开始登录房间 */
-            /** Begin to login room */
-            engine.loginRoom(roomID, user, null);
-            button.setText("logoutRoom");
+            try {
+                Long timestamp = System.currentTimeMillis() / 1000 + 3600;
+                byte[] mServerSecret = "033aa2093156a2d20f5812a56f50f37a".getBytes(); // Secret联系zego技术支持
+
+                JSONObject encryptResult = new JSONObject();
+                encryptResult.put("app_id", 1753546899); // 数值型, appid联系zego技术支持
+                encryptResult.put("timeout", timestamp); // 数值型, 注意必须是当前时间戳(秒)加超时时间(秒)
+                encryptResult.put("nonce", 11111111); // 随机数,须为数值型
+                encryptResult.put("id_name", user.userID);// 字符串,id_name必须跟setUser的userid相同
+                byte[] encryptByte = BuildThirdToken.encrypt(encryptResult.toString(), mServerSecret);
+
+                String encryptContent = "01" + new String(encryptByte, "utf-8");//最后结果须加version("01")为前缀
+                System.out.println(encryptContent);
+
+                /** 开始登录房间 */
+                /** Begin to login room */
+                ZegoRoomConfig roomConfig = new ZegoRoomConfig();
+                roomConfig.token = encryptContent;
+                engine.loginRoom(roomID, user, roomConfig);
+                button.setText("logoutRoom");
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+
         } else {
             /** 开始退出房间 */
             /** Begin to logout room */
@@ -382,42 +400,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public boolean hasData() {
-        if (appID != 0 && !appSign.equals("") ) {
+        if (appID != 0 && !appSign.equals("")) {
             return true;
         } else {
             return false;
         }
     }
 
-    class RunnablePrintLog implements Runnable {
-        TextView tv_log = findViewById(R.id.tv_log);
-        int index = 0;//指示日志的位置
-        StringBuilder appendStr = new StringBuilder();//追加的字符串
-
-        @Override
-        public void run() {
-            while (true) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                appendStr.delete(0, appendStr.length());//清空缓存数据
-                while (index < listLog.size()) {
-                    appendStr.append(listLog.get(index));
-                    index++;
-                }
-                if (!appendStr.equals("")) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            tv_log.append(appendStr.toString());
-                        }
-                    });
-                }
-            }
-        }
+    public void ClickLog(View view) {
+        //ArrayList<String> list = new ArrayList<>(listLog);
+        Bundle bundle = new Bundle();
+        bundle.putStringArrayList("list", listLog);
+        Intent intent = new Intent();
+        intent.putExtras(bundle);
+        intent.setClass(MainActivity.this, LogActivity.class);    //设置Intent属性
+        MainActivity.this.startActivity(intent);    //跳转
     }
+
 
 }
 

@@ -99,20 +99,25 @@
 
             <Button
                 android:id="@+id/btn_scan"
-                android:layout_width="wrap_content"
+                android:layout_width="52dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="3"
+                android:layout_marginLeft="8dp"
+                android:layout_weight="1"
                 android:background="@drawable/qr_code"
                 android:onClick="ClickScan" />
 
             <TextView
-                android:id="@+id/textView3"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center_vertical"
-                android:textColor="#0C0B0B"
-                android:textStyle="bold" />
+                android:layout_weight="100"
+                android:textColor="#0C0B0B" />
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="10"
+                android:onClick="ClickLog"
+                android:text="日志" />
 
         </LinearLayout>
 
@@ -305,28 +310,6 @@
                 android:text="startPublishing"
                 android:textAllCaps="false"
                 android:textColor="#FDFCFD" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginLeft="6dp"
-            android:layout_marginTop="10dp"
-            android:orientation="vertical">
-
-            <ScrollView
-                android:id="@+id/sv_log"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent">
-
-                <TextView
-                    android:id="@+id/tv_log"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textIsSelectable="true" />
-
-            </ScrollView>
 
         </LinearLayout>
 
