@@ -4,7 +4,7 @@
 
 ###  1. 运行指南：
 
-Android Studio：import  project（gradle ，and ant ）,下载依赖包，build and run 
+Android Studio：下载SDK包（[ZegoSDK 下载地址](https://doc-zh.zego.im/zh/2969.html)），放入项目/app/zego_libs/ 路径下，build and run 
 
 APP：左侧点击扫描按钮，扫描对应配置的二维码，配置二维码地址：[http://doc.oa.zego.im/tool/QrcodeConfig](http://doc.oa.zego.im/tool/QrcodeConfig)，（标题一栏，可输入 隔离域名）
 

@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">ExpressDemo3</string>
+    <string-array name="testEnv">
+        <item>true</item>
+        <item>false</item>
+    </string-array>
+    <string-array name="advanced">
+        <item>关闭</item>
+        <item>开启</item>
+    </string-array>
+
 </resources>
