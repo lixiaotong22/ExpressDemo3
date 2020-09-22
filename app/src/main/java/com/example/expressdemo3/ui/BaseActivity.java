@@ -148,6 +148,8 @@ public class BaseActivity extends AppCompatActivity {
                         engineConfig.advancedConfig.put("init_domain_name", appConfig.getInitDomain());//设置隔离域名
                     if (appConfig.isPlayUltra())
                         engineConfig.advancedConfig.put("prefer_play_ultra_source", "1");//设置优先从zego udp服务器拉流
+                    engineConfig.advancedConfig.put("play_clear_last_frame","true");
+                    engineConfig.advancedConfig.put("preview_clear_last_frame","true");
                     ZegoExpressEngine.setEngineConfig(engineConfig);
                 }
                 engine = ZegoExpressEngine.createEngine(appConfig.getAppID(), appConfig.getAppSign(), appConfig.isTestEnv(),
@@ -238,10 +240,12 @@ public class BaseActivity extends AppCompatActivity {
             listLog.add(format.format(new Date()) + " : onRoomStreamUpdate > roomID：" + roomID + " updateType：" + updateType.toString() + " streamList：" + JSON.toJSONString(streamList) + "\n");
             if (updateType == ZegoUpdateType.ADD) {
                 for (ZegoStream e : streamList) {
-                    if (e.streamID != publishStreamID) {
-                        View remote_view = findViewById(R.id.remote_view);
-                        engine.startPlayingStream(e.streamID, new ZegoCanvas(remote_view));
-                    }
+                    View remote_view = findViewById(R.id.remote_view);
+                    engine.startPlayingStream(e.streamID, new ZegoCanvas(remote_view));
+                }
+            } else if (updateType == ZegoUpdateType.DELETE) {
+                for (ZegoStream e : streamList) {
+                    engine.stopPlayingStream(e.streamID);
                 }
             }
         }

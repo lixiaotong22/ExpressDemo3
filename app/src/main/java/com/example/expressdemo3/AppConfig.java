@@ -11,8 +11,8 @@ public class AppConfig {
     private String serverSecret;
     private boolean isPlayUltra;
     private boolean isLoginAuth;
-    private boolean isPublishAuth;
-    private boolean isPlayAuth;
+    private boolean isPublishAuth;//推流鉴权，官网未上线
+    private boolean isPlayAuth;//拉流鉴权，官网未上线
 
 
     private AppConfig() {//默认值
