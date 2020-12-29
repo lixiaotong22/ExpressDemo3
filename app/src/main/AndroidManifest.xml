@@ -29,7 +29,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".ui.PublishActivity"></activity>
+        <activity android:name=".ui.MediaPlayerActivity"/>
+        <activity android:name=".ui.PublishActivity" />
         <activity android:name=".ui.PlayActivity" />
         <activity android:name=".ui.SettingActivity" />
         <activity android:name=".ui.BaseActivity" />

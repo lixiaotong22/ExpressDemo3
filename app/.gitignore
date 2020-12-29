@@ -1,8 +1,4 @@
 /build
 /release
 /debug
-/zego_libs/arm64-v8a/
-/zego_libs/armeabi-v7a/
-/zego_libs/x86/
-/zego_libs/x86_64/
-/zego_libs/ZegoExpressEngine.jar
+/zego_libs/

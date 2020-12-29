@@ -29,6 +29,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="推流 - 功能测试" />
+
+        <Button
+            android:id="@+id/btn_4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="媒体播放器 - 功能测试" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -24,18 +24,18 @@ import java.util.Date;
 
 import im.zego.zegoexpress.ZegoExpressEngine;
 import im.zego.zegoexpress.callback.IZegoEventHandler;
-import im.zego.zegoexpress.callback.IZegoPublisherUpdateCdnUrlCallback;
 import im.zego.zegoexpress.constants.ZegoBeautifyFeature;
 import im.zego.zegoexpress.constants.ZegoPlayerState;
 import im.zego.zegoexpress.constants.ZegoPublisherState;
 import im.zego.zegoexpress.constants.ZegoRoomState;
 import im.zego.zegoexpress.constants.ZegoScenario;
 import im.zego.zegoexpress.constants.ZegoUpdateType;
+
 import im.zego.zegoexpress.entity.ZegoCDNConfig;
 import im.zego.zegoexpress.entity.ZegoCanvas;
 import im.zego.zegoexpress.entity.ZegoEngineConfig;
 import im.zego.zegoexpress.entity.ZegoPlayStreamQuality;
-import im.zego.zegoexpress.entity.ZegoPlayerConfig;
+
 import im.zego.zegoexpress.entity.ZegoPublishStreamQuality;
 import im.zego.zegoexpress.entity.ZegoRoomConfig;
 import im.zego.zegoexpress.entity.ZegoStream;
@@ -63,6 +63,8 @@ public class PublishActivity extends AppCompatActivity {
     private Button btn_publish;
     private Button btn_publish_direct_cdn;
     private Button btn_publish_indirect_cdn;
+    private EditText ed_stream_id;
+    private EditText ed_cdn_url;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,6 +95,8 @@ public class PublishActivity extends AppCompatActivity {
         btn_publish = findViewById(R.id.btn_publish);
         btn_publish_direct_cdn = findViewById(R.id.btn_publish_direct_cdn);
         btn_publish_indirect_cdn = findViewById(R.id.btn_publish_indirect_cdn);
+        ed_stream_id = findViewById(R.id.ed_stream_id);
+        ed_cdn_url = findViewById(R.id.ed_cdn_url);
     }
 
     private void setData() {
@@ -136,7 +140,7 @@ public class PublishActivity extends AppCompatActivity {
                         engineConfig.advancedConfig.put("init_domain_name", appConfig.getInitDomain());//设置隔离域名
                     if (appConfig.isPlayUltra())
                         engineConfig.advancedConfig.put("prefer_play_ultra_source", "1");//设置优先从zego udp服务器拉流
-                    engineConfig.advancedConfig.put("preview_clear_last_frame","true");
+                    engineConfig.advancedConfig.put("preview_clear_last_frame", "true");
                     ZegoExpressEngine.setEngineConfig(engineConfig);
                 }
                 engine = ZegoExpressEngine.createEngine(appConfig.getAppID(), appConfig.getAppSign(), appConfig.isTestEnv(),
@@ -184,11 +188,10 @@ public class PublishActivity extends AppCompatActivity {
             }
             Button button = (Button) view;
             if (button.getText().equals("推流")) {
-                EditText et2 = findViewById(R.id.ed_stream_id);
-                localStreamID = et2.getText().toString();
+                localStreamID = ed_stream_id.getText().toString();
                 if (localStreamID.equals("")) {
-                    Toast.makeText(this, " localStreamID is empty ", Toast.LENGTH_SHORT).show();
-                    return;
+                    localStreamID = String.valueOf((int) (Math.random() * 999 + 1000));//随机生成streamID
+                    ed_stream_id.setText(localStreamID);
                 }
 
                 engine.enableBeautify(ZegoBeautifyFeature.POLISH.value() |
@@ -210,13 +213,16 @@ public class PublishActivity extends AppCompatActivity {
             }
             Button button = (Button) view;
             if (button.getText().equals("直推CDN")) {
-                EditText et1 = findViewById(R.id.ed_cdn_url);
-                EditText et2 = findViewById(R.id.ed_stream_id);
-                publishCdnURL = et1.getText().toString();
-                localStreamID = et2.getText().toString();
-                if (publishCdnURL.equals("") || localStreamID.equals("")) {
-                    Toast.makeText(this, " localStreamID or cdnURL is empty ", Toast.LENGTH_SHORT).show();
+                localStreamID = ed_stream_id.getText().toString();
+                publishCdnURL = ed_cdn_url.getText().toString();
+
+                if (publishCdnURL.equals("")) {
+                    Toast.makeText(this, "cdnURL is empty！", Toast.LENGTH_SHORT).show();
                     return;
+                }
+                if (localStreamID.equals("")) {
+                    localStreamID = String.valueOf((int) (Math.random() * 999 + 1000));
+                    ed_stream_id.setText(localStreamID);
                 }
 
                 ZegoCDNConfig config = new ZegoCDNConfig();
@@ -240,13 +246,16 @@ public class PublishActivity extends AppCompatActivity {
             }
             Button button = (Button) view;
             if (button.getText().equals("转推CDN")) {
-                EditText et1 = findViewById(R.id.ed_cdn_url);
-                EditText et2 = findViewById(R.id.ed_stream_id);
-                publishCdnURL = et1.getText().toString();
-                localStreamID = et2.getText().toString();
-                if (publishCdnURL.equals("") || localStreamID.equals("")) {
-                    Toast.makeText(this, " localStreamID or cdnURL is empty ", Toast.LENGTH_SHORT).show();
+                localStreamID = ed_stream_id.getText().toString();
+                publishCdnURL = ed_cdn_url.getText().toString();
+
+                if (publishCdnURL.equals("")) {
+                    Toast.makeText(this, "cdnURL is empty！", Toast.LENGTH_SHORT).show();
                     return;
+                }
+                if (localStreamID.equals("")) {
+                    localStreamID = String.valueOf((int) (Math.random() * 999 + 1000));
+                    ed_stream_id.setText(localStreamID);
                 }
 
                 engine.addPublishCdnUrl(localStreamID, publishCdnURL, errorCode -> {
@@ -257,6 +266,7 @@ public class PublishActivity extends AppCompatActivity {
                         // 转推失败，可能由于网络原因转推请求发送失败
                         Log.w("ExpressDemo", "转推失败，errorCode：" + errorCode);
                     }
+                    listLog.add(format.format(new Date()) + " : addPublishCdnUrl > errorCode：" + errorCode + "\n");
                 });
                 button.setText("停止转推");
             } else {
@@ -268,6 +278,7 @@ public class PublishActivity extends AppCompatActivity {
                         // 停止转推失败，可能由于网络原因停止转推请求发送失败
                         Log.w("ExpressDemo", "停止转推失败，errorCode：" + errorCode);
                     }
+                    listLog.add(format.format(new Date()) + " : removePublishCdnUrl > errorCode：" + errorCode + "\n");
                 });
                 button.setText("转推CDN");
             }

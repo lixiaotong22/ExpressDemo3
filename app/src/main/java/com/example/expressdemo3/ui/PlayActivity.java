@@ -9,6 +9,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.RadioButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.alibaba.fastjson.JSON;
@@ -29,6 +31,7 @@ import im.zego.zegoexpress.constants.ZegoPlayerState;
 import im.zego.zegoexpress.constants.ZegoPublisherState;
 import im.zego.zegoexpress.constants.ZegoRoomState;
 import im.zego.zegoexpress.constants.ZegoScenario;
+import im.zego.zegoexpress.constants.ZegoStreamResourceMode;
 import im.zego.zegoexpress.constants.ZegoUpdateType;
 import im.zego.zegoexpress.entity.ZegoCDNConfig;
 import im.zego.zegoexpress.entity.ZegoCanvas;
@@ -61,6 +64,13 @@ public class PlayActivity extends AppCompatActivity {
     private Button btn_login;
     private Button btn_play;
     private Button btn_play_url_cdn;
+    private TextView tv_p2p_Delay;
+    private EditText ed_stream_id;
+    private EditText ed_play_cdn_url;
+
+    private ZegoStreamResourceMode resourceMode;
+    private ZegoPlayerConfig zegoPlayerConfig;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +100,9 @@ public class PlayActivity extends AppCompatActivity {
         btn_login = findViewById(R.id.btn_login);
         btn_play = findViewById(R.id.btn_play);
         btn_play_url_cdn = findViewById(R.id.btn_play_url_cdn);
+        tv_p2p_Delay = findViewById(R.id.tv_p2p_Delay);
+        ed_stream_id = findViewById(R.id.ed_stream_id);
+        ed_play_cdn_url = findViewById(R.id.ed_play_cdn_url);
     }
 
     private void setData() {
@@ -100,6 +113,9 @@ public class PlayActivity extends AppCompatActivity {
 
         userID = "uID" + System.currentTimeMillis();
         userName = "uName" + System.currentTimeMillis();
+
+        zegoPlayerConfig = new ZegoPlayerConfig();
+        resourceMode = ZegoStreamResourceMode.DEFAULT;
     }
 
     private void setEventListen() {
@@ -133,7 +149,7 @@ public class PlayActivity extends AppCompatActivity {
                         engineConfig.advancedConfig.put("init_domain_name", appConfig.getInitDomain());//设置隔离域名
                     if (appConfig.isPlayUltra())
                         engineConfig.advancedConfig.put("prefer_play_ultra_source", "1");//设置优先从zego udp服务器拉流
-                    engineConfig.advancedConfig.put("play_clear_last_frame","true");
+                    engineConfig.advancedConfig.put("play_clear_last_frame", "true");
                     ZegoExpressEngine.setEngineConfig(engineConfig);
                 }
                 engine = ZegoExpressEngine.createEngine(appConfig.getAppID(), appConfig.getAppSign(), appConfig.isTestEnv(),
@@ -181,15 +197,16 @@ public class PlayActivity extends AppCompatActivity {
             }
             Button button = (Button) view;
             if (button.getText().equals("拉流")) {
-                EditText et2 = findViewById(R.id.ed_stream_id);
-                remoteStreamID = et2.getText().toString();
+                remoteStreamID = ed_stream_id.getText().toString();
                 if (remoteStreamID.equals("")) {
                     Toast.makeText(this, " remoteStreamID is empty ", Toast.LENGTH_SHORT).show();
                     return;
                 }
 
+                zegoPlayerConfig.resourceMode = resourceMode;
+
                 View remote_view = findViewById(R.id.remote_view);
-                engine.startPlayingStream(remoteStreamID, new ZegoCanvas(remote_view));
+                engine.startPlayingStream(remoteStreamID, new ZegoCanvas(remote_view), zegoPlayerConfig);
                 button.setText("停止拉流");
             } else {
                 engine.stopPlayingStream(remoteStreamID);
@@ -203,19 +220,22 @@ public class PlayActivity extends AppCompatActivity {
             }
             Button button = (Button) view;
             if (button.getText().equals("自定义拉流")) {
-                EditText et1 = findViewById(R.id.ed_play_cdn_url);
-                EditText et2 = findViewById(R.id.ed_stream_id);
-                playCdnURL = et1.getText().toString();
-                remoteStreamID = et2.getText().toString();
-                if (playCdnURL.equals("") || remoteStreamID.equals("")) {
-                    Toast.makeText(this, " remoteStreamID or cdnURL is empty ", Toast.LENGTH_SHORT).show();
+                remoteStreamID = ed_stream_id.getText().toString();
+                playCdnURL = ed_play_cdn_url.getText().toString();
+
+                if (playCdnURL.equals("")) {
+                    Toast.makeText(this, "playCdnURL is empty！", Toast.LENGTH_SHORT).show();
                     return;
+                }
+                if (remoteStreamID.equals("")) {
+                    remoteStreamID = String.valueOf((int) (Math.random() * 999 + 1000));//随机生成streamID
+                    ed_stream_id.setText(remoteStreamID);
                 }
 
                 ZegoCDNConfig config = new ZegoCDNConfig();
                 config.url = playCdnURL;
-                ZegoPlayerConfig zegoPlayerConfig = new ZegoPlayerConfig();
                 zegoPlayerConfig.cdnConfig = config;
+                zegoPlayerConfig.resourceMode = resourceMode;
 
                 View remote_view = findViewById(R.id.remote_view);
                 engine.startPlayingStream(remoteStreamID, new ZegoCanvas(remote_view), zegoPlayerConfig);
@@ -225,6 +245,38 @@ public class PlayActivity extends AppCompatActivity {
                 button.setText("自定义拉流");
             }
         });
+    }
+
+    /*
+     * 设置radio的点击事件
+     */
+    public void onRadioButtonClicked(View view) {
+        RadioButton button = (RadioButton) view;
+        boolean isChecked = button.isChecked();
+        switch (view.getId()) {
+            case R.id.radio0:
+                if (isChecked) {
+                    resourceMode = ZegoStreamResourceMode.DEFAULT;
+                }
+                break;
+            case R.id.radio1:
+                if (isChecked) {
+                    resourceMode = ZegoStreamResourceMode.ONLY_CDN;
+                }
+                break;
+            case R.id.radio2:
+                if (isChecked) {
+                    resourceMode = ZegoStreamResourceMode.ONLY_L3;
+                }
+                break;
+            case R.id.radio3:
+                if (isChecked) {
+                    resourceMode = ZegoStreamResourceMode.ONLY_RTC;
+                }
+                break;
+            default:
+                break;
+        }
     }
 
     class MyZegoEventHandler extends IZegoEventHandler {
@@ -259,6 +311,7 @@ public class PlayActivity extends AppCompatActivity {
         @Override
         public void onPlayerQualityUpdate(String streamID, ZegoPlayStreamQuality quality) {
             super.onPlayerQualityUpdate(streamID, quality);
+            tv_p2p_Delay.setText("端到端延迟：" + quality.peerToPeerDelay + " ms");
             Log.i("ExpressDemo", "onPlayerQualityUpdate >>>>>  streamID：" + streamID + " quality：" + JSON.toJSONString(quality));
             listLog.add(format.format(new Date()) + " : onPlayerQualityUpdate > streamID：" + streamID + " quality：" + JSON.toJSONString(quality) + "\n");
         }
@@ -266,6 +319,9 @@ public class PlayActivity extends AppCompatActivity {
         @Override
         public void onPlayerStateUpdate(String streamID, ZegoPlayerState state, int errorCode, JSONObject extendedData) {
             super.onPlayerStateUpdate(streamID, state, errorCode, extendedData);
+            if (state == ZegoPlayerState.NO_PLAY) {
+                tv_p2p_Delay.setText("端到端延迟：");
+            }
             Log.i("ExpressDemo", "onPlayerStateUpdate >>>>>  streamID：" + streamID + " state：" + state + " errorCode：" + errorCode + " extendedData：" + JSON.toJSONString(extendedData));
             listLog.add(format.format(new Date()) + " : onPlayerStateUpdate > streamID：" + streamID + " state：" + state + " errorCode：" + errorCode + " extendedData：" + JSON.toJSONString(extendedData) + "\n");
         }

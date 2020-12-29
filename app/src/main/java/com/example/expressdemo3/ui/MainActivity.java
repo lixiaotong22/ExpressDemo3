@@ -62,6 +62,10 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, PublishActivity.class);
             this.startActivity(intent);
         });
+        findViewById(R.id.btn_4).setOnClickListener((view) -> {
+            Intent intent = new Intent(MainActivity.this, MediaPlayerActivity.class);
+            this.startActivity(intent);
+        });
     }
 
     /**
