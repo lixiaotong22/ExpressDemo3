@@ -216,10 +216,6 @@ public class PublishActivity extends AppCompatActivity {
                 localStreamID = ed_stream_id.getText().toString();
                 publishCdnURL = ed_cdn_url.getText().toString();
 
-                if (publishCdnURL.equals("")) {
-                    Toast.makeText(this, "cdnURL is empty！", Toast.LENGTH_SHORT).show();
-                    return;
-                }
                 if (localStreamID.equals("")) {
                     localStreamID = String.valueOf((int) (Math.random() * 999 + 1000));
                     ed_stream_id.setText(localStreamID);
