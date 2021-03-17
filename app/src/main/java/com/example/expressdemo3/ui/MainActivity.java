@@ -66,6 +66,10 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, MediaPlayerActivity.class);
             this.startActivity(intent);
         });
+        findViewById(R.id.btn_5).setOnClickListener((view) -> {
+            Intent intent = new Intent(MainActivity.this, WhiteboardActivity.class);
+            this.startActivity(intent);
+        });
     }
 
     /**
@@ -74,11 +78,16 @@ public class MainActivity extends AppCompatActivity {
     public boolean checkOrRequestPermission() {
         String[] PERMISSIONS_STORAGE = {
                 "android.permission.CAMERA",
-                "android.permission.RECORD_AUDIO"};
+                "android.permission.RECORD_AUDIO",
+                "android.permission.WRITE_EXTERNAL_STORAGE",
+                "android.permission.READ_EXTERNAL_STORAGE"};
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this, "android.permission.CAMERA") != PackageManager.PERMISSION_GRANTED
-                    || ContextCompat.checkSelfPermission(this, "android.permission.RECORD_AUDIO") != PackageManager.PERMISSION_GRANTED) {
+                    || ContextCompat.checkSelfPermission(this, "android.permission.RECORD_AUDIO") != PackageManager.PERMISSION_GRANTED
+                    || ContextCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE") != PackageManager.PERMISSION_GRANTED
+                    || ContextCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE") != PackageManager.PERMISSION_GRANTED
+            ) {
                 requestPermissions(PERMISSIONS_STORAGE, 101);
                 return false;
             }

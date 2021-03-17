@@ -31,6 +31,7 @@ import im.zego.zegoexpress.constants.ZegoPublisherState;
 import im.zego.zegoexpress.constants.ZegoRoomState;
 import im.zego.zegoexpress.constants.ZegoScenario;
 import im.zego.zegoexpress.constants.ZegoUpdateType;
+import im.zego.zegoexpress.constants.ZegoVideoConfigPreset;
 import im.zego.zegoexpress.entity.ZegoCanvas;
 import im.zego.zegoexpress.entity.ZegoEngineConfig;
 import im.zego.zegoexpress.entity.ZegoPlayStreamQuality;
@@ -38,6 +39,7 @@ import im.zego.zegoexpress.entity.ZegoPublishStreamQuality;
 import im.zego.zegoexpress.entity.ZegoRoomConfig;
 import im.zego.zegoexpress.entity.ZegoStream;
 import im.zego.zegoexpress.entity.ZegoUser;
+import im.zego.zegoexpress.entity.ZegoVideoConfig;
 
 
 public class BaseActivity extends AppCompatActivity {
@@ -153,7 +155,8 @@ public class BaseActivity extends AppCompatActivity {
                     ZegoExpressEngine.setEngineConfig(engineConfig);
                 }
                 engine = ZegoExpressEngine.createEngine(appConfig.getAppID(), appConfig.getAppSign(), appConfig.isTestEnv(),
-                        ZegoScenario.COMMUNICATION, getApplication(), new MyZegoEventHandler());
+                        ZegoScenario.GENERAL, getApplication(), new MyZegoEventHandler());
+                engine.setVideoConfig(new ZegoVideoConfig(ZegoVideoConfigPreset.PRESET_180P));
                 button.setText("释放SDK");
             } else {//销毁引擎
                 ZegoExpressEngine.destroyEngine(null);

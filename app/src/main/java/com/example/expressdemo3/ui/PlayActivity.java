@@ -153,7 +153,7 @@ public class PlayActivity extends AppCompatActivity {
                     ZegoExpressEngine.setEngineConfig(engineConfig);
                 }
                 engine = ZegoExpressEngine.createEngine(appConfig.getAppID(), appConfig.getAppSign(), appConfig.isTestEnv(),
-                        ZegoScenario.COMMUNICATION, getApplication(), new PlayActivity.MyZegoEventHandler());
+                        ZegoScenario.GENERAL, getApplication(), new PlayActivity.MyZegoEventHandler());
                 button.setText("释放SDK");
             } else {//销毁引擎
                 ZegoExpressEngine.destroyEngine(null);

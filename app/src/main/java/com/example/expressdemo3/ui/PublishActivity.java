@@ -31,6 +31,8 @@ import im.zego.zegoexpress.constants.ZegoRoomState;
 import im.zego.zegoexpress.constants.ZegoScenario;
 import im.zego.zegoexpress.constants.ZegoUpdateType;
 
+import im.zego.zegoexpress.entity.ZegoBarrageMessageInfo;
+import im.zego.zegoexpress.entity.ZegoBroadcastMessageInfo;
 import im.zego.zegoexpress.entity.ZegoCDNConfig;
 import im.zego.zegoexpress.entity.ZegoCanvas;
 import im.zego.zegoexpress.entity.ZegoEngineConfig;
@@ -105,8 +107,11 @@ public class PublishActivity extends AppCompatActivity {
         listLog = new ArrayList<>();
         format = new SimpleDateFormat("HH:mm:ss");
 
-        userID = "uID" + System.currentTimeMillis();
-        userName = "uName" + System.currentTimeMillis();
+        /*userID = "uID" + System.currentTimeMillis();
+        userName = "uName" + System.currentTimeMillis();*/
+
+        userID = "uID111";
+        userName = "uName222";
     }
 
     private void setEventListen() {
@@ -144,7 +149,7 @@ public class PublishActivity extends AppCompatActivity {
                     ZegoExpressEngine.setEngineConfig(engineConfig);
                 }
                 engine = ZegoExpressEngine.createEngine(appConfig.getAppID(), appConfig.getAppSign(), appConfig.isTestEnv(),
-                        ZegoScenario.COMMUNICATION, getApplication(), new PublishActivity.MyZegoEventHandler());
+                        ZegoScenario.GENERAL, getApplication(), new PublishActivity.MyZegoEventHandler());
                 button.setText("释放SDK");
             } else {//销毁引擎
                 ZegoExpressEngine.destroyEngine(null);
@@ -329,6 +334,27 @@ public class PublishActivity extends AppCompatActivity {
             super.onPublisherStateUpdate(streamID, state, errorCode, extendedData);
             Log.i("ExpressDemo", "onPublisherStateUpdate >>>>>  streamID：" + streamID + " state：" + state + " errorCode：" + errorCode + " extendedData：" + JSON.toJSONString(extendedData));
             listLog.add(format.format(new Date()) + " : onPublisherStateUpdate > streamID：" + streamID + " state：" + state + " errorCode：" + errorCode + " extendedData：" + JSON.toJSONString(extendedData) + "\n");
+        }
+
+        @Override
+        public void onIMRecvBroadcastMessage(String roomID, ArrayList<ZegoBroadcastMessageInfo> messageList) {
+            super.onIMRecvBroadcastMessage(roomID, messageList);
+            Log.i("ExpressDemo", "onIMRecvBroadcastMessage >>>>>  roomID：" + roomID + " messageList：" + JSON.toJSONString(messageList));
+            listLog.add(format.format(new Date()) + " : onIMRecvBroadcastMessage > roomID：" + roomID + " messageList：" + JSON.toJSONString(messageList) + "\n");
+        }
+
+        @Override
+        public void onIMRecvBarrageMessage(String roomID, ArrayList<ZegoBarrageMessageInfo> messageList) {
+            super.onIMRecvBarrageMessage(roomID, messageList);
+            Log.i("ExpressDemo", "onIMRecvBarrageMessage >>>>>  roomID：" + roomID + " messageList：" + JSON.toJSONString(messageList));
+            listLog.add(format.format(new Date()) + " : onIMRecvBarrageMessage > roomID：" + roomID + " messageList：" + JSON.toJSONString(messageList) + "\n");
+        }
+
+        @Override
+        public void onIMRecvCustomCommand(String roomID, ZegoUser fromUser, String command) {
+            super.onIMRecvCustomCommand(roomID, fromUser, command);
+            Log.i("ExpressDemo", "onIMRecvCustomCommand >>>>>  roomID：" + roomID + " fromUser：" + fromUser.userID + " command：" + JSON.toJSONString(command));
+            listLog.add(format.format(new Date()) + " : onIMRecvCustomCommand > roomID：" + roomID + " fromUser：" + fromUser.userID + " command：" + JSON.toJSONString(command) + "\n");
         }
     }
 }
