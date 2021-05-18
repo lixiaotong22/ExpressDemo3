@@ -150,13 +150,14 @@ public class BaseActivity extends AppCompatActivity {
                         engineConfig.advancedConfig.put("init_domain_name", appConfig.getInitDomain());//设置隔离域名
                     if (appConfig.isPlayUltra())
                         engineConfig.advancedConfig.put("prefer_play_ultra_source", "1");//设置优先从zego udp服务器拉流
-                    engineConfig.advancedConfig.put("play_clear_last_frame","true");
-                    engineConfig.advancedConfig.put("preview_clear_last_frame","true");
+                    engineConfig.advancedConfig.put("play_clear_last_frame", "true");
+                    engineConfig.advancedConfig.put("preview_clear_last_frame", "true");
                     ZegoExpressEngine.setEngineConfig(engineConfig);
                 }
                 engine = ZegoExpressEngine.createEngine(appConfig.getAppID(), appConfig.getAppSign(), appConfig.isTestEnv(),
                         ZegoScenario.GENERAL, getApplication(), new MyZegoEventHandler());
                 engine.setVideoConfig(new ZegoVideoConfig(ZegoVideoConfigPreset.PRESET_180P));
+
                 button.setText("释放SDK");
             } else {//销毁引擎
                 ZegoExpressEngine.destroyEngine(null);

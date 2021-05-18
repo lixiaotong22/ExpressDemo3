@@ -10,24 +10,67 @@
         android:layout_height="match_parent"
         android:orientation="horizontal">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="3"
-        android:orientation="horizontal">
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="3"
+            android:orientation="horizontal">
 
-        <FrameLayout
-            android:id="@+id/layout_whiteboard"
-            android:layout_width="800px"
-            android:layout_height="450px"
-            android:background="#F8F8FF"></FrameLayout>
-    </LinearLayout>
+            <FrameLayout
+                android:id="@+id/layout_whiteboard"
+                android:layout_width="1600px"
+                android:layout_height="900px"
+                android:layout_centerInParent="true"></FrameLayout>
+        </RelativeLayout>
 
         <LinearLayout
-            android:id="@+id/layout_right"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="previousPage"
+                android:text="上一页"
+                tools:ignore="OnClick" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="当前页数  " />
+            <TextView
+                android:id="@+id/tv_page"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="  总页数" />
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="nextPage"
+                android:text="下一页"
+                tools:ignore="OnClick" />
+            <EditText
+                android:id="@+id/ed_room_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="2"
+                android:background="@layout/et_circle_bg"
+                android:hint=" 房间号 "
+                android:padding="8dp"
+                android:singleLine="true"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical">
+
 
             <Button
                 android:layout_width="match_parent"
@@ -35,6 +78,14 @@
                 android:layout_weight="1"
                 android:onClick="login"
                 android:text="登录房间"
+                tools:ignore="OnClick" />
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:onClick="logout"
+                android:text="退出房间"
                 tools:ignore="OnClick" />
 
             <Button

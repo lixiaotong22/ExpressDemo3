@@ -8,10 +8,13 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -29,6 +32,7 @@ import java.util.HashMap;
 
 import im.zego.zegodocs.IZegoDocsViewInitListener;
 import im.zego.zegodocs.IZegoDocsViewLoadListener;
+import im.zego.zegodocs.IZegoDocsViewScrollCompleteListener;
 import im.zego.zegodocs.IZegoDocsViewUploadListener;
 import im.zego.zegodocs.ZegoDocsView;
 import im.zego.zegodocs.ZegoDocsViewConfig;
@@ -52,6 +56,7 @@ import im.zego.zegowhiteboard.ZegoWhiteboardManager;
 import im.zego.zegowhiteboard.ZegoWhiteboardView;
 import im.zego.zegowhiteboard.callback.IZegoWhiteboardCreateListener;
 import im.zego.zegowhiteboard.callback.IZegoWhiteboardDestroyListener;
+import im.zego.zegowhiteboard.callback.IZegoWhiteboardExecuteListener;
 import im.zego.zegowhiteboard.callback.IZegoWhiteboardGetListListener;
 import im.zego.zegowhiteboard.callback.IZegoWhiteboardInitListener;
 import im.zego.zegowhiteboard.callback.IZegoWhiteboardManagerListener;
@@ -63,12 +68,15 @@ public class WhiteboardActivity extends AppCompatActivity {
     private ZegoExpressEngine engine;
     private String userID;
     private String userName;
-    private String localStreamID;
     private String roomID;
     private Boolean isLogin;
     private Boolean isCreateWhiteboard;
     private Boolean isCreateDocsView;
-    private long whiteboardID;
+    private FrameLayout layout_whiteboard;
+    private ZegoWhiteboardView frontWhiteboardView = null;
+    private ZegoDocsView frontDocsView = null;
+    private TextView tv_page;
+    private int frontPage;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,11 +103,12 @@ public class WhiteboardActivity extends AppCompatActivity {
 
     private void setData() {
         appConfig = AppConfig.getInstance();
+        layout_whiteboard = findViewById(R.id.layout_whiteboard);
+        tv_page = findViewById(R.id.tv_page);
 
         userID = "uID" + System.currentTimeMillis();
         userName = "uName" + System.currentTimeMillis();
-        localStreamID = "mediaPlayer-" + System.currentTimeMillis();
-        roomID = "whiteboard-1";//+ System.currentTimeMillis();
+//        roomID = "whiteboard-1-test";//+ System.currentTimeMillis();
         isLogin = false;
         isCreateWhiteboard = false;
         isCreateDocsView = false;
@@ -184,7 +193,26 @@ public class WhiteboardActivity extends AppCompatActivity {
 
     /* 登录房间 */
     public void login(View view) {
-        engine.loginRoom(roomID, new ZegoUser(userID, userName));
+        if (isLogin) {
+            Toast.makeText(WhiteboardActivity.this, "已经登录房间，请勿重复操作", Toast.LENGTH_SHORT).show();
+        } else {//未登录，进行登录操作
+            EditText ed1 = findViewById(R.id.ed_room_id);
+            roomID = ed1.getText().toString();
+            if (roomID.equals("")) {//没有主动输入房间号，则自动生成一串随机数字
+                roomID = String.valueOf((int) (Math.random() * 988 + 11));
+                ed1.setText(roomID);
+            }
+            engine.loginRoom(roomID, new ZegoUser(userID, userName));
+        }
+    }
+
+    /* 登出房间 */
+    public void logout(View view) {
+        if (isLogin) {//已登录房间，进行登出操作
+            engine.logoutRoom(roomID);
+        } else {//未登录，进行登录操作
+            Toast.makeText(WhiteboardActivity.this, "用户未登录房间！", Toast.LENGTH_SHORT).show();
+        }
     }
 
     /* 上传文件的监听事件 */
@@ -210,9 +238,6 @@ public class WhiteboardActivity extends AppCompatActivity {
                 filePath = FileUtils.getFilePathByUri(WhiteboardActivity.this, uri);//获取文件的绝对路径
                 Log.i("ExpressDemo", "获取到的本地文件路径：" + filePath);
 
-                FrameLayout layout_whiteboard = findViewById(R.id.layout_whiteboard);
-                layout_whiteboard.removeAllViews();
-
                 /* 上传文件 */
                 int renderType = ZegoDocsViewConstants.ZegoDocsViewRenderTypeDynamicPPTH5;//例如转换成 动态ppt模式
                 ZegoDocsViewManager.getInstance().uploadFile(filePath, renderType, new IZegoDocsViewUploadListener() {
@@ -231,9 +256,10 @@ public class WhiteboardActivity extends AppCompatActivity {
                                 Log.i("ExpressDemo", "转码后的文件信息，infoMap：" + infoMap.toString());
 
                                 ZegoDocsView zegoDocsView = new ZegoDocsView(WhiteboardActivity.this);
-                                zegoDocsView.setEstimatedSize(800, 450);//设置宽高
-                                String fileID = (String) infoMap.get("upload_fileid");  // 上传文件得到fileID
+                                layout_whiteboard.addView(zegoDocsView, 0, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));   // 添加到父容器中
 
+                                zegoDocsView.setEstimatedSize(16, 9);//设置宽高
+                                String fileID = (String) infoMap.get("upload_fileid");  // 上传文件得到fileID
                                 Log.i("ExpressDemo", "fileID：" + fileID);
 
                                 String authKey = ""; //
@@ -243,41 +269,46 @@ public class WhiteboardActivity extends AppCompatActivity {
                                     public void onLoadFile(int errorCode) {
                                         if (errorCode == 0) {
                                             /** 加载文件成功 */
+                                            frontDocsView = zegoDocsView;//文件加载成功，把当前显示的docsView赋值给全局变量
 
-                                            FrameLayout layout_whiteboard = findViewById(R.id.layout_whiteboard);
-                                            layout_whiteboard.addView(zegoDocsView);
+                                            ZegoWhiteboardViewModel zegoWhiteboardViewModel = new ZegoWhiteboardViewModel();
+                                            zegoWhiteboardViewModel.setRoomId(roomID);
+                                            zegoWhiteboardViewModel.setWhiteboardID(System.currentTimeMillis());
+                                            zegoWhiteboardViewModel.setName(zegoDocsView.getFileName());
+                                            zegoWhiteboardViewModel.setPageCount(zegoDocsView.getPageCount());
+                                            zegoWhiteboardViewModel.setAspectWidth(zegoDocsView.getContentSize().getWidth());
+                                            zegoWhiteboardViewModel.setAspectHeight(zegoDocsView.getContentSize().getHeight());
+                                            zegoWhiteboardViewModel.getFileInfo().setFileID(zegoDocsView.getFileID());
+                                            zegoWhiteboardViewModel.getFileInfo().setFileName(zegoDocsView.getFileName());
+                                            zegoWhiteboardViewModel.getFileInfo().setFileType(zegoDocsView.getFileType());
+                                            zegoWhiteboardViewModel.getFileInfo().setAuthKey("");
 
-//                                            whiteboardID=System.currentTimeMillis();
-//
-//                                            ZegoWhiteboardViewModel zegoWhiteboardViewModel = new ZegoWhiteboardViewModel();
-//                                            zegoWhiteboardViewModel.setRoomId(roomID);
-//                                            zegoWhiteboardViewModel.setWhiteboardID(whiteboardID);
-//                                            zegoWhiteboardViewModel.setName(zegoDocsView.getFileName());
-//                                            zegoWhiteboardViewModel.setPageCount(zegoDocsView.getPageCount());
-//                                            zegoWhiteboardViewModel.setAspectWidth(800);
-//                                            zegoWhiteboardViewModel.setAspectHeight(450);
-//                                            zegoWhiteboardViewModel.getFileInfo().setFileID(zegoDocsView.getFileID());
-//                                            zegoWhiteboardViewModel.getFileInfo().setFileName(zegoDocsView.getFileName());
-//                                            zegoWhiteboardViewModel.getFileInfo().setFileType(zegoDocsView.getFileType());
-//                                            zegoWhiteboardViewModel.getFileInfo().setAuthKey("");
-//
-//                                            ZegoWhiteboardManager.getInstance().createWhiteboardView(zegoWhiteboardViewModel, new IZegoWhiteboardCreateListener() {
-//                                                @Override
-//                                                public void onCreate(int errorCode, @Nullable ZegoWhiteboardView whiteboardView) {
-//                                                    if (errorCode == 0 && whiteboardView != null) {
-//                                                        /** 创建关联文件的白板成功 */
-////                                                        whiteboardView.setWhiteboardOperationMode(ZegoWhiteboardConstants.ZegoWhiteboardOperationModeDraw);
-////                                                        ZegoWhiteboardManager.getInstance().setToolType(ZegoWhiteboardConstants.ZegoWhiteboardViewToolPen);
-//
-//                                                        FrameLayout layout_whiteboard = findViewById(R.id.layout_whiteboard);
-////                                                        layout_whiteboard.removeAllViews();
-//                                                        layout_whiteboard.addView(whiteboardView);
-//                                                    } else {
-//                                                        /** 创建关联文件的白板失败 */
-//                                                    }
-//                                                    Log.i("ExpressDemo", "创建关联文件，errorCode：" + errorCode);
-//                                                }
-//                                            });
+                                            ZegoWhiteboardManager.getInstance().createWhiteboardView(zegoWhiteboardViewModel, new IZegoWhiteboardCreateListener() {
+                                                @Override
+                                                public void onCreate(int errorCode, @Nullable ZegoWhiteboardView whiteboardView) {
+                                                    if (errorCode == 0 && whiteboardView != null) {
+                                                        /** 创建关联文件的白板成功 */
+                                                        whiteboardView.setWhiteboardOperationMode(ZegoWhiteboardConstants.ZegoWhiteboardOperationModeZoom | ZegoWhiteboardConstants.ZegoWhiteboardOperationModeDraw);
+                                                        ZegoWhiteboardManager.getInstance().setToolType(ZegoWhiteboardConstants.ZegoWhiteboardViewToolPen);
+
+                                                        if (zegoDocsView.getVisibleSize().getHeight() != 0 || zegoDocsView.getVisibleSize().getWidth() != 0) {
+                                                            whiteboardView.setVisibleRegion(zegoDocsView.getVisibleSize());
+                                                        }
+
+                                                        layout_whiteboard.addView(whiteboardView, new ViewGroup.LayoutParams(
+                                                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                                                ViewGroup.LayoutParams.MATCH_PARENT
+                                                        ));
+
+                                                        frontWhiteboardView = whiteboardView;//加载文件白板成功，把当前显示的白板赋值给全局变量
+                                                        frontPage = 1;//赋值当前页数
+                                                        tv_page.setText(frontPage + "/" + frontDocsView.getPageCount());
+                                                    } else {
+                                                        /** 创建关联文件的白板失败 */
+                                                    }
+                                                    Log.i("ExpressDemo", "创建关联文件，errorCode：" + errorCode);
+                                                }
+                                            });
                                         } else {
                                             /** 加载文件失败 */
                                         }
@@ -305,14 +336,19 @@ public class WhiteboardActivity extends AppCompatActivity {
             ZegoWhiteboardManager.getInstance().getWhiteboardViewList(new IZegoWhiteboardGetListListener() {
                 @Override
                 public void onGetList(int err, ZegoWhiteboardView[] zegoWhiteboardViews) {
-                    if(err==0){
-                        Log.i("ExpressDemo", "getWhiteboardViewList is success! ");
+                    if (err == 0) {
+                        int len = zegoWhiteboardViews.length;
 
-                        String[] educationArray= new String[zegoWhiteboardViews.length];
+                        Log.i("ExpressDemo", "getWhiteboardViewList is success，Length：" + len);
 
-                        for (int i=0;i<zegoWhiteboardViews.length;i++) {
+                        String[] educationArray = new String[len];
+
+                        for (int i = 0; i < zegoWhiteboardViews.length; i++) {
                             list.add(zegoWhiteboardViews[i]);
-                            educationArray[i]=zegoWhiteboardViews[i].getWhiteboardViewModel().getFileInfo().getFileName();
+                            String fileName = zegoWhiteboardViews[i].getWhiteboardViewModel().getFileInfo().getFileName();
+                            if (!fileName.equals("")) {
+                                educationArray[i] = fileName;
+                            }
                         }
 
                         new AlertDialog.Builder(WhiteboardActivity.this)
@@ -321,67 +357,136 @@ public class WhiteboardActivity extends AppCompatActivity {
                                     public void onClick(DialogInterface dialog, int which) {
                                         Toast.makeText(WhiteboardActivity.this, "您选择了: " + which + ":" + educationArray[which], Toast.LENGTH_LONG).show();
                                         dialog.dismiss();
+
+                                        ZegoDocsView zegoDocsView = new ZegoDocsView(WhiteboardActivity.this);
+                                        layout_whiteboard.addView(zegoDocsView, 0, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));   // 添加到父容器中
+
+                                        zegoDocsView.setEstimatedSize(16, 9);//设置宽高
+                                        String fileID = zegoWhiteboardViews[which].getWhiteboardViewModel().getFileInfo().getFileID();
+                                        Log.i("ExpressDemo", "LoadDocs，fileID：" + fileID);
+
+                                        String authKey = ""; //
+                                        //本指引使用docs_view_container作为布局中的view容器(与demo保持一致)，容器可为FrameLayout等
+                                        zegoDocsView.loadFile(fileID, authKey, new IZegoDocsViewLoadListener() {
+                                            @Override
+                                            public void onLoadFile(int errorCode) {
+                                                if (errorCode == 0) {
+                                                    frontDocsView = zegoDocsView;//文件加载成功，把当前显示的docsView赋值给全局变量
+                                                }
+                                                Log.i("ExpressDemo", "文件加载结果，errorCode：" + errorCode);
+                                            }
+                                        });
+
+                                        /** 加载白板视图 */
+                                        layout_whiteboard.addView(zegoWhiteboardViews[which], new ViewGroup.LayoutParams(
+                                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                                ViewGroup.LayoutParams.MATCH_PARENT
+                                        ));
+
+                                        frontWhiteboardView = zegoWhiteboardViews[which];//加载文件白板成功，把当前显示的白板赋值给全局变量
+                                        frontPage = 1;//赋值当前页数
+                                        tv_page.setText(frontPage + "/" + frontDocsView.getPageCount());
                                     }
                                 }).setNegativeButton("取消", null)
                                 .show();
-                    }else {
-                        Toast.makeText(WhiteboardActivity.this, "房间内，获取白板view列表失败，error:"+err, Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(WhiteboardActivity.this, "房间内，获取白板view列表失败，error:" + err, Toast.LENGTH_SHORT).show();
                     }
                 }
             });
-
-
         } else {
             Toast.makeText(WhiteboardActivity.this, "没有登录房间，请先登录", Toast.LENGTH_SHORT).show();
         }
     }
 
-    /* 卸载白板的监听事件 */
+    /* 上一页的监听事件 */
+    public void previousPage(View view) {
+        int targetPage = frontPage - 1;
+        frontDocsView.flipPage(targetPage, new IZegoDocsViewScrollCompleteListener() {
+            @Override
+            public void onScrollComplete(boolean result) {
+                if (result) {
+                    frontWhiteboardView.scrollTo(0f, frontDocsView.getVerticalPercent(), new IZegoWhiteboardExecuteListener() {
+                        @Override
+                        public void onExecute(int i) {
+                            tv_page.setText(targetPage + "/" + frontDocsView.getPageCount());
+                            frontPage = targetPage;
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    /* 下一页的监听事件 */
+    public void nextPage(View view) {
+        int targetPage = frontPage + 1;
+        frontDocsView.flipPage(targetPage, new IZegoDocsViewScrollCompleteListener() {
+            @Override
+            public void onScrollComplete(boolean result) {
+                if (result) {
+                    frontWhiteboardView.scrollTo(0f, frontDocsView.getVerticalPercent(), new IZegoWhiteboardExecuteListener() {
+                        @Override
+                        public void onExecute(int i) {
+                            tv_page.setText(targetPage + "/" + frontDocsView.getPageCount());
+                            frontPage = targetPage;
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    /* 卸载文件/白板的监听事件 */
     public void unload(View view) {
-        if (isLogin) {
-            ZegoWhiteboardManager.getInstance().destroyWhiteboardView(whiteboardID, new IZegoWhiteboardDestroyListener() {
+        if (isLogin && (frontWhiteboardView != null)) {
+            ZegoWhiteboardManager.getInstance().destroyWhiteboardView(frontWhiteboardView.getWhiteboardViewModel().getWhiteboardID(), new IZegoWhiteboardDestroyListener() {
                 @Override
-                public void onDestroy(int error, long l) {
-                    if(error==0){
-                        Log.i("ExpressDemo", "白板销毁成功，对应whiteboardID为：" + l);
-                        FrameLayout layout_whiteboard = findViewById(R.id.layout_whiteboard);
+                public void onDestroy(int error, long id) {
+                    if (error == 0) {
+                        Log.i("ExpressDemo", "白板销毁成功，对应whiteboardID为：" + id);
+                        if (frontDocsView != null) {
+                            frontDocsView.unloadFile();
+                        }
                         layout_whiteboard.removeAllViews();
-                    }else {
+
+                        frontDocsView = null;
+                        frontWhiteboardView = null;
+                        frontPage = 0;//重置当前页数
+                    } else {
                         Log.i("ExpressDemo", "白板销毁失败，错误码error为：" + error);
                     }
                 }
             });
         } else {
-            Toast.makeText(WhiteboardActivity.this, "没有登录房间，请先登录", Toast.LENGTH_SHORT).show();
+            Toast.makeText(WhiteboardActivity.this, "没有登录房间 或者 当前没有展示白板，无需销毁", Toast.LENGTH_SHORT).show();
         }
     }
 
     /* 创建纯白板 */
     public void createWhiteBoard(View view) {
         if (isLogin) {
-            whiteboardID=System.currentTimeMillis();
-
             ZegoWhiteboardViewModel zegoWhiteboardViewModel = new ZegoWhiteboardViewModel();
             zegoWhiteboardViewModel.setAspectHeight(9);    // 希望创建的白板的等比高
-            zegoWhiteboardViewModel.setAspectWidth(16 * 5);    // 希望创建的白板的等比宽，如果需要创建多页的白板，需要乘以相应的倍数
-            zegoWhiteboardViewModel.setName("白板1");
+            zegoWhiteboardViewModel.setAspectWidth(16);    // 希望创建的白板的等比宽，如果需要创建多页的白板，需要乘以相应的倍数
             zegoWhiteboardViewModel.setPageCount(1);      // 白板的页数
             zegoWhiteboardViewModel.setRoomId(roomID);
-            zegoWhiteboardViewModel.setWhiteboardID(whiteboardID);
+            zegoWhiteboardViewModel.setWhiteboardID(System.currentTimeMillis());
 
             ZegoWhiteboardManager.getInstance().createWhiteboardView(zegoWhiteboardViewModel, new IZegoWhiteboardCreateListener() {
                 @Override
                 public void onCreate(int errorCode, @Nullable ZegoWhiteboardView whiteboardView) {
                     if (errorCode == 0 && whiteboardView != null) {
-                        /** 创建关联文件的白板成功 */
-                        Log.i("ExpressDemo", "whiteboardView的宽高" + whiteboardView.getHorizontalPercent()+" ::: "+whiteboardView.getVerticalPercent());
+                        /** 创建纯白板成功 */
+                        Log.i("ExpressDemo", "whiteboardView的宽高" + whiteboardView.getHorizontalPercent() + " ::: " + whiteboardView.getVerticalPercent());
 
+                        whiteboardView.setBackgroundColor(Color.parseColor("#F8F8FF"));
                         whiteboardView.setWhiteboardOperationMode(ZegoWhiteboardConstants.ZegoWhiteboardOperationModeDraw);
                         ZegoWhiteboardManager.getInstance().setToolType(ZegoWhiteboardConstants.ZegoWhiteboardViewToolPen);
 
-                        FrameLayout layout_whiteboard = findViewById(R.id.layout_whiteboard);
-//                            layout_whiteboard.removeAllViews();
                         layout_whiteboard.addView(whiteboardView);
+
+                        frontWhiteboardView = whiteboardView;//加载文件白板成功，把当前显示的白板赋值给全局变量
                     } else {
                         /** 创建关联文件的白板失败 */
                     }
@@ -410,42 +515,6 @@ public class WhiteboardActivity extends AppCompatActivity {
         public void onRoomUserUpdate(String roomID, ZegoUpdateType updateType, ArrayList<ZegoUser> userList) {
             super.onRoomUserUpdate(roomID, updateType, userList);
             Log.i("ExpressDemo", "onRoomUserUpdate >>>>>  roomID：" + roomID + " updateType：" + updateType.toString() + " userList：" + JSON.toJSONString(userList));
-        }
-
-        @Override
-        public void onRoomStreamUpdate(String roomID, ZegoUpdateType updateType, ArrayList<ZegoStream> streamList) {
-            super.onRoomStreamUpdate(roomID, updateType, streamList);
-            Log.i("ExpressDemo", "onRoomStreamUpdate >>>>>  roomID：" + roomID + " updateType：" + updateType.toString() + " streamList：" + JSON.toJSONString(streamList));
-        }
-
-        @Override
-        public void onPublisherQualityUpdate(String streamID, ZegoPublishStreamQuality quality) {
-            super.onPublisherQualityUpdate(streamID, quality);
-            Log.i("ExpressDemo", "onPublisherQualityUpdate >>>>>  streamID：" + streamID + " quality：" + JSON.toJSONString(quality));
-        }
-
-        @Override
-        public void onPlayerQualityUpdate(String streamID, ZegoPlayStreamQuality quality) {
-            super.onPlayerQualityUpdate(streamID, quality);
-            Log.i("ExpressDemo", "onPlayerQualityUpdate >>>>>  streamID：" + streamID + " quality：" + JSON.toJSONString(quality));
-        }
-
-        @Override
-        public void onPlayerStateUpdate(String streamID, ZegoPlayerState state, int errorCode, JSONObject extendedData) {
-            super.onPlayerStateUpdate(streamID, state, errorCode, extendedData);
-            Log.i("ExpressDemo", "onPlayerStateUpdate >>>>>  streamID：" + streamID + " state：" + state + " errorCode：" + errorCode + " extendedData：" + JSON.toJSONString(extendedData));
-        }
-
-        @Override
-        public void onPublisherStateUpdate(String streamID, ZegoPublisherState state, int errorCode, JSONObject extendedData) {
-            super.onPublisherStateUpdate(streamID, state, errorCode, extendedData);
-            if (state == ZegoPublisherState.PUBLISHING) {
-//                isPublish = true;
-                ((TextView) findViewById(R.id.tv_streamID)).setText(localStreamID);
-            } else if (state == ZegoPublisherState.NO_PUBLISH) {
-                ((TextView) findViewById(R.id.tv_streamID)).setText("");
-            }
-            Log.i("ExpressDemo", "onPublisherStateUpdate >>>>>  streamID：" + streamID + " state：" + state + " errorCode：" + errorCode + " extendedData：" + JSON.toJSONString(extendedData));
         }
     }
 
