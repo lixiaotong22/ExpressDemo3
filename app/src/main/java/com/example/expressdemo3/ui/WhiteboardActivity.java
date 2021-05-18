@@ -372,20 +372,20 @@ public class WhiteboardActivity extends AppCompatActivity {
                                             public void onLoadFile(int errorCode) {
                                                 if (errorCode == 0) {
                                                     frontDocsView = zegoDocsView;//文件加载成功，把当前显示的docsView赋值给全局变量
+
+                                                    /** 加载白板视图 */
+                                                    layout_whiteboard.addView(zegoWhiteboardViews[which], new ViewGroup.LayoutParams(
+                                                            ViewGroup.LayoutParams.MATCH_PARENT,
+                                                            ViewGroup.LayoutParams.MATCH_PARENT
+                                                    ));
+
+                                                    frontWhiteboardView = zegoWhiteboardViews[which];//加载文件白板成功，把当前显示的白板赋值给全局变量
+                                                    frontPage = 1;//赋值当前页数
+                                                    tv_page.setText(frontPage + "/" + frontDocsView.getPageCount());
                                                 }
                                                 Log.i("ExpressDemo", "文件加载结果，errorCode：" + errorCode);
                                             }
                                         });
-
-                                        /** 加载白板视图 */
-                                        layout_whiteboard.addView(zegoWhiteboardViews[which], new ViewGroup.LayoutParams(
-                                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                                ViewGroup.LayoutParams.MATCH_PARENT
-                                        ));
-
-                                        frontWhiteboardView = zegoWhiteboardViews[which];//加载文件白板成功，把当前显示的白板赋值给全局变量
-                                        frontPage = 1;//赋值当前页数
-                                        tv_page.setText(frontPage + "/" + frontDocsView.getPageCount());
                                     }
                                 }).setNegativeButton("取消", null)
                                 .show();
@@ -401,40 +401,52 @@ public class WhiteboardActivity extends AppCompatActivity {
 
     /* 上一页的监听事件 */
     public void previousPage(View view) {
-        int targetPage = frontPage - 1;
-        frontDocsView.flipPage(targetPage, new IZegoDocsViewScrollCompleteListener() {
-            @Override
-            public void onScrollComplete(boolean result) {
-                if (result) {
-                    frontWhiteboardView.scrollTo(0f, frontDocsView.getVerticalPercent(), new IZegoWhiteboardExecuteListener() {
-                        @Override
-                        public void onExecute(int i) {
-                            tv_page.setText(targetPage + "/" + frontDocsView.getPageCount());
-                            frontPage = targetPage;
-                        }
-                    });
+        if (frontPage != 1) {
+            int targetPage = frontPage - 1;
+            frontDocsView.flipPage(targetPage, new IZegoDocsViewScrollCompleteListener() {
+                @Override
+                public void onScrollComplete(boolean result) {
+                    if (result) {
+                        frontWhiteboardView.scrollTo(0f, frontDocsView.getVerticalPercent(), new IZegoWhiteboardExecuteListener() {
+                            @Override
+                            public void onExecute(int err) {
+                                if (err == 0) {
+                                    tv_page.setText(targetPage + "/" + frontDocsView.getPageCount());
+                                    frontPage = targetPage;
+                                }
+                            }
+                        });
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            Toast.makeText(WhiteboardActivity.this, "当前已是首页，无法向上翻页", Toast.LENGTH_SHORT).show();
+        }
     }
 
     /* 下一页的监听事件 */
     public void nextPage(View view) {
-        int targetPage = frontPage + 1;
-        frontDocsView.flipPage(targetPage, new IZegoDocsViewScrollCompleteListener() {
-            @Override
-            public void onScrollComplete(boolean result) {
-                if (result) {
-                    frontWhiteboardView.scrollTo(0f, frontDocsView.getVerticalPercent(), new IZegoWhiteboardExecuteListener() {
-                        @Override
-                        public void onExecute(int i) {
-                            tv_page.setText(targetPage + "/" + frontDocsView.getPageCount());
-                            frontPage = targetPage;
-                        }
-                    });
+        if (frontPage != frontDocsView.getPageCount()) {
+            int targetPage = frontPage + 1;
+            frontDocsView.flipPage(targetPage, new IZegoDocsViewScrollCompleteListener() {
+                @Override
+                public void onScrollComplete(boolean result) {
+                    if (result) {
+                        frontWhiteboardView.scrollTo(0f, frontDocsView.getVerticalPercent(), new IZegoWhiteboardExecuteListener() {
+                            @Override
+                            public void onExecute(int err) {
+                                if (err == 0) {
+                                    tv_page.setText(targetPage + "/" + frontDocsView.getPageCount());
+                                    frontPage = targetPage;
+                                }
+                            }
+                        });
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            Toast.makeText(WhiteboardActivity.this, "当前已是尾页，无法向下翻页", Toast.LENGTH_SHORT).show();
+        }
     }
 
     /* 卸载文件/白板的监听事件 */
@@ -452,7 +464,7 @@ public class WhiteboardActivity extends AppCompatActivity {
 
                         frontDocsView = null;
                         frontWhiteboardView = null;
-                        frontPage = 0;//重置当前页数
+                        frontPage = 1;//重置当前页数
                     } else {
                         Log.i("ExpressDemo", "白板销毁失败，错误码error为：" + error);
                     }
