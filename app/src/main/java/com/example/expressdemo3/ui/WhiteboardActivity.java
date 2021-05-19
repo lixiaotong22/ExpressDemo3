@@ -78,8 +78,8 @@ public class WhiteboardActivity extends AppCompatActivity {
 
     private AppConfig appConfig;
     private ZegoExpressEngine engine;
-    private String userID;
-    private String userName;
+    //    private String userID;
+//    private String userName;
     private String roomID;
     private Boolean isLogin;
     private Boolean isCreateWhiteboard;
@@ -118,8 +118,8 @@ public class WhiteboardActivity extends AppCompatActivity {
         layout_whiteboard = findViewById(R.id.layout_whiteboard);
         tv_page = findViewById(R.id.tv_page);
 
-        userID = "uID" + System.currentTimeMillis();
-        userName = "uName" + System.currentTimeMillis();
+//        userID = "uID" + System.currentTimeMillis();
+//        userName = "uName" + System.currentTimeMillis();
 //        roomID = "whiteboard-1-test";//+ System.currentTimeMillis();
         isLogin = false;
         isCreateWhiteboard = false;
@@ -214,7 +214,7 @@ public class WhiteboardActivity extends AppCompatActivity {
                 roomID = String.valueOf((int) (Math.random() * 988 + 11));
                 ed1.setText(roomID);
             }
-            engine.loginRoom(roomID, new ZegoUser(userID, userName));
+            engine.loginRoom(roomID, new ZegoUser("uID" + System.currentTimeMillis(), "uName" + System.currentTimeMillis()));
         }
     }
 
@@ -627,9 +627,7 @@ public class WhiteboardActivity extends AppCompatActivity {
                 for (int index = 0; index < jsonArray.length(); index++) {
                     JSONObject jsonObject = jsonArray.getJSONObject(index);
                     String fileID = jsonObject.getString("fileID");
-                    educationArray[0] = fileID;
-
-                    Log.i("ExpressDemo", "index: " + index + ", jsonObject: " + jsonObject);
+                    educationArray[index] = fileID;
                 }
 
                 return educationArray;
