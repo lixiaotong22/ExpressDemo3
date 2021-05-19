@@ -71,7 +71,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-
             <Button
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -108,10 +107,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:onClick="loadDocs"
-                android:text="加载文档"
+                android:onClick="onRoomDocs"
+                android:text="房间内文件"
                 tools:ignore="OnClick" />
 
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:onClick="onLineDocs"
+                android:text="在线文件"
+                tools:ignore="OnClick" />
 
             <Button
                 android:layout_width="match_parent"

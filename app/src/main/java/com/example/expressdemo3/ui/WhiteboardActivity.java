@@ -8,9 +8,12 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.text.PrecomputedText;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,12 +26,20 @@ import com.alibaba.fastjson.JSON;
 import com.example.expressdemo3.AppConfig;
 import com.example.expressdemo3.R;
 import com.example.expressdemo3.util.FileUtils;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+
+import javax.xml.transform.Result;
 
 import im.zego.zegodocs.IZegoDocsViewInitListener;
 import im.zego.zegodocs.IZegoDocsViewLoadListener;
@@ -40,6 +51,7 @@ import im.zego.zegodocs.ZegoDocsViewConstants;
 import im.zego.zegodocs.ZegoDocsViewManager;
 import im.zego.zegoexpress.ZegoExpressEngine;
 import im.zego.zegoexpress.callback.IZegoEventHandler;
+import im.zego.zegoexpress.callback.IZegoIMSendCustomCommandCallback;
 import im.zego.zegoexpress.constants.ZegoPlayerState;
 import im.zego.zegoexpress.constants.ZegoPublisherState;
 import im.zego.zegoexpress.constants.ZegoRoomState;
@@ -329,7 +341,7 @@ public class WhiteboardActivity extends AppCompatActivity {
     }
 
     /* 加载文档的监听事件 */
-    public void loadDocs(View view) {
+    public void onRoomDocs(View view) {
         if (isLogin) {
             ArrayList<ZegoWhiteboardView> list = new ArrayList<>();
 
@@ -399,9 +411,18 @@ public class WhiteboardActivity extends AppCompatActivity {
         }
     }
 
+    /* 加载在线文档的监听事件，获取gitee的线上静态json资源 */
+    public void onLineDocs(View view) {
+        if (isLogin) {
+            new InternetTask().execute();//启动子线程执行网络耗时操作
+        } else {
+            Toast.makeText(WhiteboardActivity.this, "没有登录房间，请先登录", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     /* 上一页的监听事件 */
     public void previousPage(View view) {
-        if (frontPage != 1) {
+        if (frontPage > 1 && frontWhiteboardView != null && frontDocsView != null) {
             int targetPage = frontPage - 1;
             frontDocsView.flipPage(targetPage, new IZegoDocsViewScrollCompleteListener() {
                 @Override
@@ -416,17 +437,24 @@ public class WhiteboardActivity extends AppCompatActivity {
                                 }
                             }
                         });
+                        String jsonString = "{\"fillPage\":" + targetPage + "}";
+                        engine.sendCustomCommand(roomID, jsonString, null, new IZegoIMSendCustomCommandCallback() {
+                            @Override
+                            public void onIMSendCustomCommandResult(int errorCode) {
+                                Log.i("ExpressDemo", "sendCustomCommand，errorCode：" + errorCode);
+                            }
+                        });
                     }
                 }
             });
         } else {
-            Toast.makeText(WhiteboardActivity.this, "当前已是首页，无法向上翻页", Toast.LENGTH_SHORT).show();
+            Toast.makeText(WhiteboardActivity.this, "只有文件白板才可翻页 或者 当前已是首页，无法向上翻页！", Toast.LENGTH_SHORT).show();
         }
     }
 
     /* 下一页的监听事件 */
     public void nextPage(View view) {
-        if (frontPage != frontDocsView.getPageCount()) {
+        if (frontPage < frontDocsView.getPageCount() && frontWhiteboardView != null && frontDocsView != null) {
             int targetPage = frontPage + 1;
             frontDocsView.flipPage(targetPage, new IZegoDocsViewScrollCompleteListener() {
                 @Override
@@ -441,37 +469,46 @@ public class WhiteboardActivity extends AppCompatActivity {
                                 }
                             }
                         });
+                        String jsonString = "{\"fillPage\":" + targetPage + "}";
+                        engine.sendCustomCommand(roomID, jsonString, null, new IZegoIMSendCustomCommandCallback() {
+                            @Override
+                            public void onIMSendCustomCommandResult(int errorCode) {
+                                Log.i("ExpressDemo", "sendCustomCommand，errorCode：" + errorCode);
+                            }
+                        });
                     }
                 }
             });
         } else {
-            Toast.makeText(WhiteboardActivity.this, "当前已是尾页，无法向下翻页", Toast.LENGTH_SHORT).show();
+            Toast.makeText(WhiteboardActivity.this, "只有文件白板才可翻页 或者 当前已是尾页，无法向下翻页", Toast.LENGTH_SHORT).show();
         }
     }
 
     /* 卸载文件/白板的监听事件 */
     public void unload(View view) {
-        if (isLogin && (frontWhiteboardView != null)) {
-            ZegoWhiteboardManager.getInstance().destroyWhiteboardView(frontWhiteboardView.getWhiteboardViewModel().getWhiteboardID(), new IZegoWhiteboardDestroyListener() {
-                @Override
-                public void onDestroy(int error, long id) {
-                    if (error == 0) {
-                        Log.i("ExpressDemo", "白板销毁成功，对应whiteboardID为：" + id);
-                        if (frontDocsView != null) {
-                            frontDocsView.unloadFile();
+        if (isLogin && ((frontWhiteboardView != null) || (frontDocsView != null))) {
+            if (frontWhiteboardView != null) {
+                ZegoWhiteboardManager.getInstance().destroyWhiteboardView(frontWhiteboardView.getWhiteboardViewModel().getWhiteboardID(), new IZegoWhiteboardDestroyListener() {
+                    @Override
+                    public void onDestroy(int error, long id) {
+                        if (error == 0) {
+                            Log.i("ExpressDemo", "白板销毁成功，对应whiteboardID为：" + id);
+                            frontWhiteboardView = null;
+                        } else {
+                            Log.i("ExpressDemo", "白板销毁失败，错误码error为：" + error);
                         }
-                        layout_whiteboard.removeAllViews();
-
-                        frontDocsView = null;
-                        frontWhiteboardView = null;
-                        frontPage = 1;//重置当前页数
-                    } else {
-                        Log.i("ExpressDemo", "白板销毁失败，错误码error为：" + error);
                     }
-                }
-            });
+                });
+            }
+            if (frontDocsView != null) {
+                frontDocsView.unloadFile();
+                frontDocsView = null;
+                Log.i("ExpressDemo", "DocsView, unloadFile is success! ");
+            }
+            layout_whiteboard.removeAllViews();
+            frontPage = 0;//重置当前页数
         } else {
-            Toast.makeText(WhiteboardActivity.this, "没有登录房间 或者 当前没有展示白板，无需销毁", Toast.LENGTH_SHORT).show();
+            Toast.makeText(WhiteboardActivity.this, "没有登录房间 或者 当前没有展示 文件/白板，无需销毁", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -510,6 +547,23 @@ public class WhiteboardActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * 发送请求（使用 OKHttp）
+     */
+    private String sendByOKHttp(String url) {
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder().url(url).build();
+        try {
+            Response response = client.newCall(request).execute();//发送请求
+            String result = response.body().string();
+            Log.d("ExpressDemo", "result: " + result);
+            return result;
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.d("ExpressDemo", "IOException: " + e.toString());
+            return "";
+        }
+    }
 
     class MyZegoEventHandler extends IZegoEventHandler {
         @Override
@@ -527,6 +581,102 @@ public class WhiteboardActivity extends AppCompatActivity {
         public void onRoomUserUpdate(String roomID, ZegoUpdateType updateType, ArrayList<ZegoUser> userList) {
             super.onRoomUserUpdate(roomID, updateType, userList);
             Log.i("ExpressDemo", "onRoomUserUpdate >>>>>  roomID：" + roomID + " updateType：" + updateType.toString() + " userList：" + JSON.toJSONString(userList));
+        }
+
+        @Override
+        public void onIMRecvCustomCommand(String roomID, ZegoUser fromUser, String jsonString) {
+            super.onIMRecvCustomCommand(roomID, fromUser, jsonString);
+            Log.i("ExpressDemo", "onIMRecvCustomCommand >>>>>  roomID：" + roomID + " fromUser：" + JSON.toJSONString(fromUser) + " command：" + JSON.toJSONString(jsonString));
+
+            try {
+                JSONObject jsonObject = new JSONObject(jsonString);
+                int targetPage = jsonObject.getInt("fillPage");
+
+                if (frontDocsView != null) {
+                    frontDocsView.flipPage(targetPage, new IZegoDocsViewScrollCompleteListener() {
+                        @Override
+                        public void onScrollComplete(boolean result) {
+                            Log.i("ExpressDemo", "DocsView flipPage, result: " + result);
+                            if (result) {
+                                tv_page.setText(targetPage + "/" + frontDocsView.getPageCount());
+                            }
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 使用轻量级的AsyncTask，来执行网络耗时操作，最后在主线程更新UI
+     */
+    class InternetTask extends AsyncTask<String, Void, String[]> {
+        String resource = "https://gitee.com/lixiaotong22/config-repo/raw/master/docsInfoList";
+
+        //该方法运行在后台线程中，因此不能在该线程中更新UI，UI线程为主线程
+        @Override
+        protected String[] doInBackground(String... strings) {
+            try {
+                String jsonString = sendByOKHttp(resource);
+                JSONArray jsonArray = new JSONArray(jsonString);
+
+                String[] educationArray = new String[jsonArray.length()];
+
+                for (int index = 0; index < jsonArray.length(); index++) {
+                    JSONObject jsonObject = jsonArray.getJSONObject(index);
+                    String fileID = jsonObject.getString("fileID");
+                    educationArray[0] = fileID;
+
+                    Log.i("ExpressDemo", "index: " + index + ", jsonObject: " + jsonObject);
+                }
+
+                return educationArray;
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return new String[0];
+            }
+        }
+
+        //在doInBackground 执行完成后，onPostExecute 方法将被UI 线程调用，
+        // 后台的计算结果将通过该方法传递到UI线程，并且在界面上展示给用户.
+        @Override
+        protected void onPostExecute(String[] educationArray) {
+            super.onPostExecute(educationArray);
+
+            new AlertDialog.Builder(WhiteboardActivity.this)
+                    .setTitle("请选择 在线的文件").setIcon(R.drawable.wenjian)
+                    .setItems(educationArray, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            Toast.makeText(WhiteboardActivity.this, "您选择了: " + which + ":" + educationArray[which], Toast.LENGTH_LONG).show();
+                            dialog.dismiss();
+
+                            ZegoDocsView zegoDocsView = new ZegoDocsView(WhiteboardActivity.this);
+                            layout_whiteboard.addView(zegoDocsView, 0, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));   // 添加到父容器中
+
+                            zegoDocsView.setEstimatedSize(16, 9);//设置宽高
+                            String fileID = educationArray[which];
+                            Log.i("ExpressDemo", "LoadDocs，fileID：" + fileID);
+
+                            String authKey = ""; //
+                            //本指引使用docs_view_container作为布局中的view容器(与demo保持一致)，容器可为FrameLayout等
+                            zegoDocsView.loadFile(fileID, authKey, new IZegoDocsViewLoadListener() {
+                                @Override
+                                public void onLoadFile(int errorCode) {
+                                    if (errorCode == 0) {
+                                        frontDocsView = zegoDocsView;//文件加载成功，把当前显示的docsView赋值给全局变量
+                                        frontWhiteboardView = null;//只加载共享文档，不加载白板，置空
+
+                                        frontPage = 1;//赋值当前页数
+                                        tv_page.setText(frontPage + "/" + frontDocsView.getPageCount());
+                                    }
+                                    Log.i("ExpressDemo", "文件加载结果，errorCode：" + errorCode);
+                                }
+                            });
+                        }
+                    }).setNegativeButton("取消", null)
+                    .show();
         }
     }
 
